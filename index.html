@@ -1,37 +1,36 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AI Predictor</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; }
-        .search-area { display: flex; gap: 8px; margin-bottom: 20px; }
-        input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #333; background: #1c1c1e; color: #fff; font-size: 16px; }
-        button { padding: 12px 18px; border-radius: 12px; border: none; background: #007aff; color: #fff; font-weight: 700; cursor: pointer; }
-        .card { background: #1c1c1e; padding: 16px; margin-bottom: 12px; border-radius: 14px; border: 1px solid #2c2c2e; animation: fadeIn 0.3s; }
-        .card:active { background: #2c2c2e; }
-        #chart { width: 100%; border-radius: 16px; display: none; margin-top: 15px; border: 1px solid #333; }
-        .loader { display: none; color: #007aff; text-align: center; margin: 20px; font-weight: bold; }
-        .result-box { background: #1c1c1e; padding: 20px; border-radius: 16px; border: 1px solid #007aff; display: none; margin-top: 10px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; text-align: center; }
+        .input-group { display: flex; gap: 8px; margin-bottom: 20px; }
+        input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #333; background: #1c1c1e; color: #fff; font-size: 16px; outline: none; }
+        button { padding: 14px 20px; border-radius: 12px; border: none; background: #007aff; color: #fff; font-weight: bold; cursor: pointer; }
+        .card { background: #1c1c1e; padding: 16px; margin-bottom: 12px; border-radius: 15px; border: 1px solid #2c2c2e; text-align: left; }
+        #chart { width: 100%; border-radius: 15px; display: none; margin-top: 20px; border: 1px solid #333; }
+        .loader { display: none; color: #007aff; margin: 20px; font-weight: bold; }
+        .res-box { background: #1c1c1e; padding: 20px; border-radius: 18px; border: 1px solid #007aff; display: none; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h2 style="text-align:center;">AI Market Intelligence 🤖</h2>
+
+    <h2>Market AI Intelligence 🤖</h2>
     
-    <div class="search-area">
-        <input type="text" id="tickerInput" placeholder="Поиск (RUB, BTC...)" onkeypress="if(event.key==='Enter') search()">
+    <div class="input-group">
+        <input type="text" id="tickerInp" placeholder="Напр: RUB или BTC">
         <button onclick="search()">Найти</button>
     </div>
 
-    <div id="loader" class="loader">🧠 Нейросеть анализирует графики...</div>
+    <div id="loader" class="loader">⚙️ Нейросеть думает...</div>
     <div id="results"></div>
 
-    <div id="resultBox" class="result-box">
-        <div id="dirText" style="font-size: 20px; font-weight: 800; color: #34c759;"></div>
-        <div id="confText" style="color: #8e8e93; margin: 8px 0;"></div>
+    <div id="resBox" class="res-box">
+        <div id="dir" style="font-size: 22px; font-weight: 800;"></div>
+        <div id="conf" style="color: #8e8e93; margin: 10px 0;"></div>
         <img id="chart">
     </div>
 
@@ -39,36 +38,41 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // !!! ЗАМЕНИ ЭТОТ URL НА СВОЙ !!!
-        const API_BASE = "https://mosaic-headache-giddily.ngrok-free.dev/search_ticker?query=RUB";
-        const headers = { "ngrok-skip-browser-warning": "true" };
+        // ОБЯЗАТЕЛЬНО ОБНОВИ ЭТУ ССЫЛКУ!
+        const API_BASE = "https://mosaic-headache-giddily.ngrok-free.dev/search_ticker?query=RUB"; 
 
         async function search() {
-            const q = document.getElementById('tickerInput').value.trim();
+            const q = document.getElementById('tickerInp').value.trim();
             const resDiv = document.getElementById('results');
             const loader = document.getElementById('loader');
 
             resDiv.innerHTML = '';
-            document.getElementById('resultBox').style.display = 'none';
+            document.getElementById('resBox').style.display = 'none';
             loader.style.display = 'block';
 
             try {
-                const response = await fetch(`${API_BASE}/search_ticker?query=${encodeURIComponent(q)}`, { headers });
+                // Добавляем случайный параметр, чтобы избежать кэширования
+                const url = `${API_BASE}/search_ticker?query=${encodeURIComponent(q)}&t=${Date.now()}`;
+                
+                const response = await fetch(url, { 
+                    headers: { "ngrok-skip-browser-warning": "true" } 
+                });
+                
                 const json = await response.json();
 
                 if (json.data && json.data.length > 0) {
                     json.data.forEach(item => {
                         const div = document.createElement('div');
                         div.className = 'card';
-                        div.innerHTML = `<strong>${item.name}</strong><br><small style="color:#8e8e93">${item.symbol}</small>`;
+                        div.innerHTML = `<strong>${item.name}</strong><br><span style="color:#8e8e93">${item.symbol}</span>`;
                         div.onclick = () => analyze(item.symbol);
                         resDiv.appendChild(div);
                     });
                 } else {
-                    resDiv.innerHTML = "<p style='text-align:center; color:#8e8e93;'>Ничего не нашли. Попробуйте 'RUB'</p>";
+                    resDiv.innerHTML = "<p style='color:#8e8e93'>Ничего не найдено. Нажмите Найти с пустым полем.</p>";
                 }
             } catch (e) {
-                alert("Ошибка связи с сервером. Проверьте ngrok!");
+                alert("Ошибка связи! Проверьте, что ngrok запущен и URL в коде верный.");
             } finally {
                 loader.style.display = 'none';
             }
@@ -79,20 +83,22 @@
             document.getElementById('loader').style.display = 'block';
 
             try {
-                const response = await fetch(`${API_BASE}/analyze?ticker=${symbol}`, { headers });
+                const response = await fetch(`${API_BASE}/analyze?ticker=${symbol}`, { 
+                    headers: { "ngrok-skip-browser-warning": "true" } 
+                });
                 const data = await response.json();
 
                 if (data.status === "success") {
-                    document.getElementById('dirText').innerText = data.forecast.direction;
-                    document.getElementById('dirText').style.color = data.forecast.direction.includes("ВВЕРХ") ? "#34c759" : "#ff3b30";
-                    document.getElementById('confText').innerText = "Уверенность моделей: " + data.forecast.confidence + "%";
+                    document.getElementById('dir').innerText = data.forecast.direction;
+                    document.getElementById('dir').style.color = data.forecast.direction.includes("ВВЕРХ") ? "#34c759" : "#ff3b30";
+                    document.getElementById('conf').innerText = "Уверенность: " + data.forecast.confidence + "%";
                     
                     const img = document.getElementById('chart');
                     img.src = "data:image/png;base64," + data.plot;
                     img.style.display = 'block';
                     
-                    document.getElementById('resultBox').style.display = 'block';
-                    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                    document.getElementById('resBox').style.display = 'block';
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
                 }
             } catch (e) {
                 alert("Ошибка анализа");
