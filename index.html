@@ -1,165 +1,94 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Trading Predictor</title>
+    <title>AI Trader Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: #111111;
-            --card-bg: #1c1c1e;
-            --accent: #007aff;
-            --text: #ffffff;
-        }
-        body { 
-            font-family: -apple-system, system-ui, sans-serif; 
-            background-color: var(--bg-color); 
-            color: var(--text); 
-            margin: 0; padding: 20px; 
-            display: flex; flex-direction: column; align-items: center;
-        }
-        .container { width: 100%; max-width: 400px; }
-        h2 { margin-bottom: 20px; font-weight: 600; }
-
-        .search-box { display: flex; gap: 10px; width: 100%; margin-bottom: 20px; }
-        input { 
-            flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; 
-            background: #222; color: white; outline: none;
-        }
-        button { 
-            padding: 12px 20px; border-radius: 10px; border: none; 
-            background: var(--accent); color: white; font-weight: bold; cursor: pointer;
-        }
-
-        .loader { display: none; margin: 20px 0; color: var(--accent); }
-        
-        .card { 
-            background: var(--card-bg); border: 1px solid #333; border-radius: 12px; 
-            padding: 15px; margin-bottom: 10px; cursor: pointer; transition: 0.2s;
-            text-align: left;
-        }
-        .card:active { transform: scale(0.98); background: #2c2c2e; }
-
-        #forecastBox { 
-            display: none; background: var(--card-bg); border: 1px solid var(--accent); 
-            border-radius: 15px; padding: 15px; margin: 20px 0; width: 100%;
-        }
-        #chart { width: 100%; border-radius: 15px; display: none; margin-top: 15px; border: 1px solid #333; }
-        
-        .error-msg { color: #ff453a; font-size: 14px; margin-top: 10px; display: none; }
+        body { font-family: -apple-system, sans-serif; background: #111; color: #fff; text-align: center; padding: 20px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid #333; background: #222; color: #fff; }
+        button { padding: 12px; background: #007aff; color: white; border: none; border-radius: 10px; font-weight: bold; }
+        .card { background: #1c1c1e; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #333; text-align: left; }
+        #chart { width: 100%; border-radius: 12px; display: none; margin-top: 15px; }
+        .loader { display: none; color: #007aff; margin: 20px; }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <h2>AI Market Predictor 📈</h2>
-        
-        <div class="search-box">
-            <input type="text" id="tickerInput" placeholder="Введите актив (RUB, BTC...)">
-            <button onclick="search()">Поиск</button>
-        </div>
-
-        <div id="errorLabel" class="error-msg"></div>
-        <div id="loader" class="loader">⚙️ Нейросеть обрабатывает данные...</div>
-        
-        <div id="results"></div>
-
-        <div id="forecastBox">
-            <div style="font-size: 18px; font-weight: bold;" id="dirText"></div>
-            <div style="color: #8e8e93; margin-top: 5px;" id="confText"></div>
-            <img id="chart" src="" alt="График">
-        </div>
+    <h3>AI Predictor 📈</h3>
+    <div class="search-box">
+        <input type="text" id="tickerInput" placeholder="Введите RUB или BTC...">
+        <button onclick="search()">Найти</button>
     </div>
 
-    <script>
-        // Инициализация Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.expand(); // Расширить на весь экран
+    <div id="loader" class="loader">Анализирую...</div>
+    <div id="results"></div>
+    <img id="chart">
 
-        // !!! ЗАМЕНИ ЭТОТ URL НА СВОЙ АКТУАЛЬНЫЙ АДРЕС NGROK !!!
+    <script>
+        // !!! ПРОВЕРЬ ЭТОТ АДРЕС ЕЩЕ РАЗ !!! 
+        // Он должен быть в точности как тот, что ты открывал в браузере
         const API_BASE = "https://mosaic-headache-giddily.ngrok-free.dev/search_ticker?query=RUB";
 
-        // Заголовки для пробития защиты ngrok
-        const requestHeaders = {
-            "ngrok-skip-browser-warning": "true",
-            "Accept": "application/json"
-        };
-
-        function showError(msg) {
-            const err = document.getElementById('errorLabel');
-            err.innerText = "⚠️ " + msg;
-            err.style.display = 'block';
-            setTimeout(() => { err.style.display = 'none'; }, 5000);
-        }
-
         async function search() {
-            const query = document.getElementById('tickerInput').value.trim();
-            if(!query) return;
+            const q = document.getElementById('tickerInput').value.trim();
+            if (!q) return;
 
-            const resultsDiv = document.getElementById('results');
-            const loader = document.getElementById('loader');
+            console.log("Отправляю запрос на:", `${API_BASE}/search_ticker?query=${q}`);
             
-            resultsDiv.innerHTML = '';
-            loader.style.display = 'block';
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('results').innerHTML = '';
 
             try {
-                const response = await fetch(`${API_BASE}/search_ticker?query=${query}`, { headers: requestHeaders });
-                if(!response.ok) throw new Error("Сервер недоступен (код " + response.status + ")");
+                const res = await fetch(`${API_BASE}/search_ticker?query=${q}`, {
+                    headers: { "ngrok-skip-browser-warning": "true" }
+                });
                 
-                const json = await response.json();
+                if (!res.ok) throw new Error("Ошибка сети: " + res.status);
                 
-                if(json.data && json.data.length > 0) {
+                const json = await res.json();
+                console.log("Ответ от сервера:", json);
+
+                if (json.data && json.data.length > 0) {
+                    let html = '';
                     json.data.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = 'card';
-                        div.innerHTML = `<strong>${item.name}</strong><br><small style="color:#8e8e93">${item.symbol}</small>`;
-                        div.onclick = () => analyze(item.symbol);
-                        resultsDiv.appendChild(div);
+                        html += `<div class="card" onclick="analyze('${item.symbol}')">
+                                    <b>${item.name}</b><br><small>${item.symbol}</small>
+                                 </div>`;
                     });
+                    document.getElementById('results').innerHTML = html;
                 } else {
-                    showError("Ничего не найдено");
+                    document.getElementById('results').innerHTML = "Ничего не найдено (сервер вернул пустой список)";
                 }
             } catch (err) {
-                console.error(err);
-                showError("Ошибка соединения. Убедитесь, что ngrok запущен.");
+                console.error("Ошибка запроса:", err);
+                alert("Ошибка связи с сервером. Проверьте адрес ngrok!");
+                document.getElementById('results').innerHTML = "Ошибка: " + err.message;
             } finally {
-                loader.style.display = 'none';
+                document.getElementById('loader').style.display = 'none';
             }
         }
 
         async function analyze(symbol) {
             document.getElementById('results').innerHTML = '';
-            const loader = document.getElementById('loader');
-            const box = document.getElementById('forecastBox');
-            const chartImg = document.getElementById('chart');
-
-            loader.style.display = 'block';
-            box.style.display = 'none';
-            chartImg.style.display = 'none';
-
+            document.getElementById('loader').style.display = 'block';
+            
             try {
-                const response = await fetch(`${API_BASE}/analyze?ticker=${symbol}`, { headers: requestHeaders });
-                const data = await response.json();
-
-                if(data.status === "success") {
-                    document.getElementById('dirText').innerText = "Прогноз: " + data.forecast.direction;
-                    document.getElementById('confText').innerText = "Уверенность ИИ: " + data.forecast.confidence + "%";
-                    
-                    chartImg.src = "data:image/png;base64," + data.plot;
-                    
-                    box.style.display = 'block';
-                    chartImg.style.display = 'block';
-                    
-                    // Вибрация телефона при успехе (только в Telegram)
-                    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                } else {
-                    showError(data.message);
+                const res = await fetch(`${API_BASE}/analyze?ticker=${symbol}`, {
+                    headers: { "ngrok-skip-browser-warning": "true" }
+                });
+                const data = await res.json();
+                if (data.status === "success") {
+                    const img = document.getElementById('chart');
+                    img.src = "data:image/png;base64," + data.plot;
+                    img.style.display = 'block';
+                    alert("Прогноз: " + data.forecast.direction);
                 }
-            } catch (err) {
-                showError("Ошибка анализа. Проверьте консоль.");
+            } catch (e) {
+                alert("Ошибка при анализе");
             } finally {
-                loader.style.display = 'none';
+                document.getElementById('loader').style.display = 'none';
             }
         }
     </script>
