@@ -1,111 +1,66 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AI Predictor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Trader Dashboard</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 20px; text-align: center; }
-        .input-group { display: flex; gap: 8px; margin-bottom: 20px; }
-        input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #333; background: #1c1c1e; color: #fff; font-size: 16px; outline: none; }
-        button { padding: 14px 20px; border-radius: 12px; border: none; background: #007aff; color: #fff; font-weight: bold; cursor: pointer; }
-        .card { background: #1c1c1e; padding: 16px; margin-bottom: 12px; border-radius: 15px; border: 1px solid #2c2c2e; text-align: left; }
-        #chart { width: 100%; border-radius: 15px; display: none; margin-top: 20px; border: 1px solid #333; }
-        .loader { display: none; color: #007aff; margin: 20px; font-weight: bold; }
-        .res-box { background: #1c1c1e; padding: 20px; border-radius: 18px; border: 1px solid #007aff; display: none; margin-top: 10px; }
+        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .card { background: #1c1c1e; border-radius: 20px; padding: 15px; border: 1px solid #2c2c2e; min-height: 250px; display: flex; flex-direction: column; }
+        .name { color: #8e8e93; font-size: 12px; font-weight: bold; }
+        .price { font-size: 22px; font-weight: 800; margin: 5px 0; }
+        .pred { font-size: 13px; font-weight: bold; padding: 8px; border-radius: 10px; text-align: center; margin: 10px 0; }
+        .up { background: rgba(52, 199, 89, 0.1); color: #34c759; }
+        .down { background: rgba(255, 59, 48, 0.1); color: #ff3b30; }
+        img { width: 100%; border-radius: 10px; margin-top: auto; }
+        .loader { text-align: center; margin-top: 50%; color: #007aff; font-weight: bold; }
     </style>
 </head>
 <body>
-
-    <h2>Market AI Intelligence 🤖</h2>
-    
-    <div class="input-group">
-        <input type="text" id="tickerInp" placeholder="Напр: RUB или BTC">
-        <button onclick="search()">Найти</button>
-    </div>
-
-    <div id="loader" class="loader">⚙️ Нейросеть думает...</div>
-    <div id="results"></div>
-
-    <div id="resBox" class="res-box">
-        <div id="dir" style="font-size: 22px; font-weight: 800;"></div>
-        <div id="conf" style="color: #8e8e93; margin: 10px 0;"></div>
-        <img id="chart">
+    <div id="loader" class="loader">ПОЛУЧЕНИЕ ДАННЫХ ОТ ИИ...</div>
+    <div class="grid" id="main" style="display:none;">
+        <div class="card">
+            <div class="name">USD / RUB</div>
+            <div class="price" id="rp">--</div>
+            <div id="rs" class="pred">...</div>
+            <img id="rg">
+        </div>
+        <div class="card">
+            <div class="name">EUR / USD</div>
+            <div class="price" id="ep">--</div>
+            <div id="es" class="pred">...</div>
+            <img id="eg">
+        </div>
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        // ТВОЯ ССЫЛКА NGROK
+        const API = "https://mosaic-headache-giddily.ngrok-free.dev/search_ticker?query=RUB";
 
-        // ОБЯЗАТЕЛЬНО ОБНОВИ ЭТУ ССЫЛКУ!
-        const API_BASE = "https://mosaic-headache-giddily.ngrok-free.dev/search_ticker?query=RUB"; 
-
-        async function search() {
-            const q = document.getElementById('tickerInp').value.trim();
-            const resDiv = document.getElementById('results');
-            const loader = document.getElementById('loader');
-
-            resDiv.innerHTML = '';
-            document.getElementById('resBox').style.display = 'none';
-            loader.style.display = 'block';
-
+        async function load() {
             try {
-                // Добавляем случайный параметр, чтобы избежать кэширования
-                const url = `${API_BASE}/search_ticker?query=${encodeURIComponent(q)}&t=${Date.now()}`;
-                
-                const response = await fetch(url, { 
-                    headers: { "ngrok-skip-browser-warning": "true" } 
-                });
-                
-                const json = await response.json();
+                const res = await fetch(`${API}/dashboard`, { headers: {"ngrok-skip-browser-warning":"1"} });
+                const d = await res.json();
+                if(d.status === "success") {
+                    document.getElementById('rp').innerText = d.rub.price;
+                    document.getElementById('rs').innerText = d.rub.dir;
+                    document.getElementById('rs').className = "pred " + (d.rub.dir.includes("ВВЕРХ") ? "up" : "down");
+                    document.getElementById('rg').src = "data:image/png;base64," + d.rub.plot;
 
-                if (json.data && json.data.length > 0) {
-                    json.data.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = 'card';
-                        div.innerHTML = `<strong>${item.name}</strong><br><span style="color:#8e8e93">${item.symbol}</span>`;
-                        div.onclick = () => analyze(item.symbol);
-                        resDiv.appendChild(div);
-                    });
-                } else {
-                    resDiv.innerHTML = "<p style='color:#8e8e93'>Ничего не найдено. Нажмите Найти с пустым полем.</p>";
+                    document.getElementById('ep').innerText = d.eur.price;
+                    document.getElementById('es').innerText = d.eur.dir;
+                    document.getElementById('es').className = "pred " + (d.eur.dir.includes("ВВЕРХ") ? "up" : "down");
+                    document.getElementById('eg').src = "data:image/png;base64," + d.eur.plot;
+
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('main').style.display = 'grid';
                 }
-            } catch (e) {
-                alert("Ошибка связи! Проверьте, что ngrok запущен и URL в коде верный.");
-            } finally {
-                loader.style.display = 'none';
-            }
+            } catch(e) { document.getElementById('loader').innerText = "ОШИБКА СЕРВЕРА"; }
         }
-
-        async function analyze(symbol) {
-            document.getElementById('results').innerHTML = '';
-            document.getElementById('loader').style.display = 'block';
-
-            try {
-                const response = await fetch(`${API_BASE}/analyze?ticker=${symbol}`, { 
-                    headers: { "ngrok-skip-browser-warning": "true" } 
-                });
-                const data = await response.json();
-
-                if (data.status === "success") {
-                    document.getElementById('dir').innerText = data.forecast.direction;
-                    document.getElementById('dir').style.color = data.forecast.direction.includes("ВВЕРХ") ? "#34c759" : "#ff3b30";
-                    document.getElementById('conf').innerText = "Уверенность: " + data.forecast.confidence + "%";
-                    
-                    const img = document.getElementById('chart');
-                    img.src = "data:image/png;base64," + data.plot;
-                    img.style.display = 'block';
-                    
-                    document.getElementById('resBox').style.display = 'block';
-                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                }
-            } catch (e) {
-                alert("Ошибка анализа");
-            } finally {
-                document.getElementById('loader').style.display = 'none';
-            }
-        }
+        load();
+        setInterval(load, 60000); // Обновлять раз в минуту
     </script>
 </body>
 </html>
