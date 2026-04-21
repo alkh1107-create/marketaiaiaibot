@@ -1,50 +1,79 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>ML Trading Bot</title>
+    <meta charset="UTF-8">
+    <title>AI Trading Dashboard</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #121212; color: white; }
-        .container { margin-top: 50px; }
-        input { padding: 10px; border-radius: 5px; border: none; }
-        button { padding: 10px 20px; background: #00ff88; border: none; cursor: pointer; font-weight: bold; }
-        #plot { margin-top: 20px; max-width: 90%; border: 2px solid #333; }
-        .res { font-size: 20px; margin: 20px; color: #00ff88; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0e1117; color: white; text-align: center; margin: 0; padding: 20px; }
+        .card { background: #161b22; border-radius: 12px; padding: 20px; max-width: 1000px; margin: 20px auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid #30363d; }
+        input, button { padding: 12px; margin: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; }
+        button { background: #238636; cursor: pointer; font-weight: bold; border: none; }
+        button:hover { background: #2ea043; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .m-card { background: #21262d; padding: 15px; border-radius: 8px; border-left: 4px solid #58a6ff; text-align: left; }
+        .ens { border-left-color: #f0883e; background: #30363d; }
+        img { width: 100%; border-radius: 8px; margin-top: 20px; border: 1px solid #30363d; }
+        .date-info { color: #8b949e; margin-bottom: 10px; font-size: 0.9em; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Прогноз на завтра</h1>
-        <input type="text" id="ticker" value="RUB=X">
-        <button onclick="run()">Анализ</button>
-        <div id="loading" style="display:none;">Считаю нейронками...</div>
-        <div id="result" class="res"></div>
-        <img id="plot">
+
+    <div class="card">
+        <h2>Анализ финансового рынка</h2>
+        <input type="text" id="ticker" value="RUB=X" placeholder="Тикер">
+        <input type="date" id="start_date" value="2024-01-01">
+        <button onclick="runAnalysis()">Запустить нейросети</button>
+        <div id="loader" style="display:none; color: #58a6ff; margin-top: 10px;">Анализирую историю котировок...</div>
+    </div>
+
+    <div id="results" style="display:none;">
+        <div class="card">
+            <div class="date-info" id="date_meta"></div>
+            <h3>Текущая цена: <span id="price_meta" style="color:#58a6ff"></span></h3>
+            
+            <div class="grid" id="models_grid"></div>
+            
+            <img id="main_plot">
+        </div>
     </div>
 
     <script>
-        async function run() {
+        async function runAnalysis() {
             const ticker = document.getElementById('ticker').value;
-            // ЗАМЕНИ ЭТУ ССЫЛКУ НА ТУ, ЧТО ВЫДАЛ COLAB
+            const startDate = document.getElementById('start_date').value;
+            // ЗАМЕНИ НА СВОЙ URL ИЗ NGROK
             const url = "https://mosaic-headache-giddily.ngrok-free.dev"; 
-            
-            document.getElementById('loading').style.display = 'block';
+
+            document.getElementById('loader').style.display = 'block';
             
             try {
-                const response = await fetch(`${url}/analyze?ticker=${ticker}`, {
-                    headers: { "ngrok-skip-browser-warning": "true" }
+                const res = await fetch(`${url}/analyze?ticker=${ticker}&start_date=${startDate}`, {
+                    headers: { "ngrok-skip-browser-warning": "69420" }
                 });
-                const data = await response.json();
-                
-                document.getElementById('result').innerHTML = `
-                    Дата: ${data.forecast.date} <br>
-                    Направление: ${data.forecast.direction} <br>
-                    Уверенность: ${data.forecast.confidence}
-                `;
-                document.getElementById('plot').src = "data:image/png;base64," + data.plot;
+                const data = await res.json();
+
+                if (data.status === "success") {
+                    document.getElementById('date_meta').innerText = `Данные за: ${data.meta.last_date} | Прогноз на: ${data.meta.next_date}`;
+                    document.getElementById('price_meta').innerText = data.meta.price;
+                    document.getElementById('main_plot').src = "data:image/png;base64," + data.plot;
+
+                    const grid = document.getElementById('models_grid');
+                    grid.innerHTML = "";
+                    
+                    for (const [name, info] of Object.entries(data.models)) {
+                        const div = document.createElement('div');
+                        div.className = `m-card ${name === 'Ансамбль' ? 'ens' : ''}`;
+                        div.innerHTML = `<strong>${name}</strong><br><span style="font-size:1.2em">${info.dir}</span><br><small>Уверенность: ${info.conf}</small>`;
+                        grid.appendChild(div);
+                    }
+                    
+                    document.getElementById('results').style.display = 'block';
+                }
             } catch (e) {
-                alert("Ошибка! Проверь, запущен ли Colab и верна ли ссылка.");
+                alert("Ошибка! Проверь Colab и ссылку ngrok.");
+            } finally {
+                document.getElementById('loader').style.display = 'none';
             }
-            document.getElementById('loading').style.display = 'none';
         }
     </script>
 </body>
