@@ -1,66 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Trader Dashboard</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>ML Trading Bot</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #000; color: #fff; margin: 0; padding: 10px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .card { background: #1c1c1e; border-radius: 20px; padding: 15px; border: 1px solid #2c2c2e; min-height: 250px; display: flex; flex-direction: column; }
-        .name { color: #8e8e93; font-size: 12px; font-weight: bold; }
-        .price { font-size: 22px; font-weight: 800; margin: 5px 0; }
-        .pred { font-size: 13px; font-weight: bold; padding: 8px; border-radius: 10px; text-align: center; margin: 10px 0; }
-        .up { background: rgba(52, 199, 89, 0.1); color: #34c759; }
-        .down { background: rgba(255, 59, 48, 0.1); color: #ff3b30; }
-        img { width: 100%; border-radius: 10px; margin-top: auto; }
-        .loader { text-align: center; margin-top: 50%; color: #007aff; font-weight: bold; }
+        body { font-family: sans-serif; text-align: center; background: #121212; color: white; }
+        .container { margin-top: 50px; }
+        input { padding: 10px; border-radius: 5px; border: none; }
+        button { padding: 10px 20px; background: #00ff88; border: none; cursor: pointer; font-weight: bold; }
+        #plot { margin-top: 20px; max-width: 90%; border: 2px solid #333; }
+        .res { font-size: 20px; margin: 20px; color: #00ff88; }
     </style>
 </head>
 <body>
-    <div id="loader" class="loader">ПОЛУЧЕНИЕ ДАННЫХ ОТ ИИ...</div>
-    <div class="grid" id="main" style="display:none;">
-        <div class="card">
-            <div class="name">USD / RUB</div>
-            <div class="price" id="rp">--</div>
-            <div id="rs" class="pred">...</div>
-            <img id="rg">
-        </div>
-        <div class="card">
-            <div class="name">EUR / USD</div>
-            <div class="price" id="ep">--</div>
-            <div id="es" class="pred">...</div>
-            <img id="eg">
-        </div>
+    <div class="container">
+        <h1>Прогноз на завтра</h1>
+        <input type="text" id="ticker" value="RUB=X">
+        <button onclick="run()">Анализ</button>
+        <div id="loading" style="display:none;">Считаю нейронками...</div>
+        <div id="result" class="res"></div>
+        <img id="plot">
     </div>
 
     <script>
-        // ТВОЯ ССЫЛКА NGROK
-        const API = "https://mosaic-headache-giddily.ngrok-free.dev/search_ticker?query=RUB";
-
-        async function load() {
+        async function run() {
+            const ticker = document.getElementById('ticker').value;
+            // ЗАМЕНИ ЭТУ ССЫЛКУ НА ТУ, ЧТО ВЫДАЛ COLAB
+            const url = "https://mosaic-headache-giddily.ngrok-free.dev"; 
+            
+            document.getElementById('loading').style.display = 'block';
+            
             try {
-                const res = await fetch(`${API}/dashboard`, { headers: {"ngrok-skip-browser-warning":"1"} });
-                const d = await res.json();
-                if(d.status === "success") {
-                    document.getElementById('rp').innerText = d.rub.price;
-                    document.getElementById('rs').innerText = d.rub.dir;
-                    document.getElementById('rs').className = "pred " + (d.rub.dir.includes("ВВЕРХ") ? "up" : "down");
-                    document.getElementById('rg').src = "data:image/png;base64," + d.rub.plot;
-
-                    document.getElementById('ep').innerText = d.eur.price;
-                    document.getElementById('es').innerText = d.eur.dir;
-                    document.getElementById('es').className = "pred " + (d.eur.dir.includes("ВВЕРХ") ? "up" : "down");
-                    document.getElementById('eg').src = "data:image/png;base64," + d.eur.plot;
-
-                    document.getElementById('loader').style.display = 'none';
-                    document.getElementById('main').style.display = 'grid';
-                }
-            } catch(e) { document.getElementById('loader').innerText = "ОШИБКА СЕРВЕРА"; }
+                const response = await fetch(`${url}/analyze?ticker=${ticker}`, {
+                    headers: { "ngrok-skip-browser-warning": "true" }
+                });
+                const data = await response.json();
+                
+                document.getElementById('result').innerHTML = `
+                    Дата: ${data.forecast.date} <br>
+                    Направление: ${data.forecast.direction} <br>
+                    Уверенность: ${data.forecast.confidence}
+                `;
+                document.getElementById('plot').src = "data:image/png;base64," + data.plot;
+            } catch (e) {
+                alert("Ошибка! Проверь, запущен ли Colab и верна ли ссылка.");
+            }
+            document.getElementById('loading').style.display = 'none';
         }
-        load();
-        setInterval(load, 60000); // Обновлять раз в минуту
     </script>
 </body>
 </html>
