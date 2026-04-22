@@ -2,79 +2,93 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AI Trading Dashboard</title>
+    <title>Triple AI Backtest</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0e1117; color: white; text-align: center; margin: 0; padding: 20px; }
-        .card { background: #161b22; border-radius: 12px; padding: 20px; max-width: 1000px; margin: 20px auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5); border: 1px solid #30363d; }
-        input, button { padding: 12px; margin: 10px; border-radius: 6px; border: 1px solid #30363d; background: #0d1117; color: white; }
-        button { background: #238636; cursor: pointer; font-weight: bold; border: none; }
-        button:hover { background: #2ea043; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-        .m-card { background: #21262d; padding: 15px; border-radius: 8px; border-left: 4px solid #58a6ff; text-align: left; }
-        .ens { border-left-color: #f0883e; background: #30363d; }
+        body { font-family: sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .input-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px; }
+        input, button { padding: 10px; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 6px; }
+        button { background: #238636; border: none; font-weight: bold; cursor: pointer; }
+        .scenario-box { margin-top: 30px; border-left: 4px solid #58a6ff; padding-left: 15px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .m-card { background: #21262d; padding: 10px; border-radius: 6px; font-size: 13px; border: 1px solid #30363d; }
+        .up { color: #3fb950; } .down { color: #f85149; }
         img { width: 100%; border-radius: 8px; margin-top: 20px; border: 1px solid #30363d; }
-        .date-info { color: #8b949e; margin-bottom: 10px; font-size: 0.9em; }
+        .guide { font-size: 14px; color: #8b949e; line-height: 1.6; }
     </style>
 </head>
 <body>
 
+<div class="container">
     <div class="card">
-        <h2>Анализ финансового рынка</h2>
-        <input type="text" id="ticker" value="RUB=X" placeholder="Тикер">
-        <input type="date" id="start_date" value="2024-01-01">
-        <button onclick="runAnalysis()">Запустить нейросети</button>
-        <div id="loader" style="display:none; color: #58a6ff; margin-top: 10px;">Анализирую историю котировок...</div>
+        <h2>Сравнительный AI-анализ (3 периода)</h2>
+        <div class="input-row">
+            <div><label>Тикер</label><br><input type="text" id="ticker" value="RUB=X" style="width:90%"></div>
+            <div><label>Период 1 (Short)</label><br><input type="date" id="s1" value="2024-01-01"></div>
+            <div><label>Период 2 (Mid)</label><br><input type="date" id="s2" value="2021-01-01"></div>
+            <div><label>Период 3 (Long)</label><br><input type="date" id="s3" value="2015-01-01"></div>
+            <div><label>Начало графиков</label><br><input type="date" id="ps" value="2026-01-01"></div>
+        </div>
+        <button onclick="run()" id="btn">Запустить анализ всех моделей</button>
     </div>
 
     <div id="results" style="display:none;">
         <div class="card">
-            <div class="date-info" id="date_meta"></div>
-            <h3>Текущая цена: <span id="price_meta" style="color:#58a6ff"></span></h3>
-            
-            <div class="grid" id="models_grid"></div>
-            
+            <h3>Текущая цена: <span id="price" style="color:#58a6ff"></span> | Прогноз на: <span id="f_date"></span></h3>
+            <div id="scenarios_container"></div>
             <img id="main_plot">
         </div>
+
+        <div class="card guide">
+            <h3>Как понять, что метрика хорошая?</h3>
+            <p><strong>Accuracy (Точность):</strong> Если число выше <b>0.53</b> — это хорошо. На финансовых рынках даже 55% точности позволяют стабильно зарабатывать на дистанции.</p>
+            <p><strong>Уверенность (Conf):</strong> Это сила сигнала. Если она выше <b>65%</b>, модель видит четкий паттерн. Если 51-53% — модель сомневается.</p>
+            <p><i>Сравнивая 3 периода, смотри, какая модель стабильнее: та, что училась на "свежих" данных (2024), или та, что видела кризисы (2015).</i></p>
+        </div>
     </div>
+</div>
 
-    <script>
-        async function runAnalysis() {
-            const ticker = document.getElementById('ticker').value;
-            const startDate = document.getElementById('start_date').value;
-            // ЗАМЕНИ НА СВОЙ URL ИЗ NGROK
-            const url = "https://mosaic-headache-giddily.ngrok-free.dev"; 
+<script>
+    async function run() {
+        const btn = document.getElementById('btn');
+        btn.innerText = "Обучение 21 модели... подождите";
+        btn.disabled = true;
 
-            document.getElementById('loader').style.display = 'block';
-            
-            try {
-                const res = await fetch(`${url}/analyze?ticker=${ticker}&start_date=${startDate}`, {
-                    headers: { "ngrok-skip-browser-warning": "69420" }
-                });
-                const data = await res.json();
+        const url = "https://mosaic-headache-giddily.ngrok-free.dev";
+        const query = `ticker=${document.getElementById('ticker').value}&s1=${document.getElementById('s1').value}&s2=${document.getElementById('s2').value}&s3=${document.getElementById('s3').value}&p_start=${document.getElementById('ps').value}`;
 
-                if (data.status === "success") {
-                    document.getElementById('date_meta').innerText = `Данные за: ${data.meta.last_date} | Прогноз на: ${data.meta.next_date}`;
-                    document.getElementById('price_meta').innerText = data.meta.price;
-                    document.getElementById('main_plot').src = "data:image/png;base64," + data.plot;
+        try {
+            const r = await fetch(`${url}/analyze?${query}`, { headers: {"ngrok-skip-browser-warning": "1"} });
+            const d = await r.json();
 
-                    const grid = document.getElementById('models_grid');
-                    grid.innerHTML = "";
-                    
-                    for (const [name, info] of Object.entries(data.models)) {
-                        const div = document.createElement('div');
-                        div.className = `m-card ${name === 'Ансамбль' ? 'ens' : ''}`;
-                        div.innerHTML = `<strong>${name}</strong><br><span style="font-size:1.2em">${info.dir}</span><br><small>Уверенность: ${info.conf}</small>`;
-                        grid.appendChild(div);
+            if(d.status === "success") {
+                document.getElementById('price').innerText = d.meta.price;
+                document.getElementById('f_date').innerText = d.meta.forecast_date;
+                document.getElementById('main_plot').src = "data:image/png;base64," + d.plot;
+
+                const container = document.getElementById('scenarios_container');
+                container.innerHTML = "";
+
+                for(const [date, models] of Object.entries(d.scenarios)) {
+                    let html = `<div class="scenario-box"><h4>Период обучения с: ${date}</h4><div class="grid">`;
+                    for(const [name, m] of Object.entries(models)) {
+                        html += `
+                            <div class="m-card">
+                                <b>${name}</b><br>
+                                <span class="${m.dir === 'ВВЕРХ' ? 'up' : 'down'}">${m.dir}</span><br>
+                                Acc: ${m.acc}<br>
+                                Conf: ${m.conf}
+                            </div>`;
                     }
-                    
-                    document.getElementById('results').style.display = 'block';
+                    html += `</div></div>`;
+                    container.innerHTML += html;
                 }
-            } catch (e) {
-                alert("Ошибка! Проверь Colab и ссылку ngrok.");
-            } finally {
-                document.getElementById('loader').style.display = 'none';
+                document.getElementById('results').style.display = 'block';
             }
-        }
-    </script>
+        } catch(e) { alert("Ошибка связи с Colab!"); }
+        finally { btn.innerText = "Запустить анализ всех моделей"; btn.disabled = false; }
+    }
+</script>
 </body>
 </html>
