@@ -6,7 +6,7 @@
     <style>
         body { font-family: 'Inter', sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; line-height: 1.5; }
         .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
-        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px; }
         label { font-size: 12px; color: #8b949e; display: block; margin-bottom: 5px; }
         input, button { background: #0d1117; border: 1px solid #30363d; color: white; padding: 10px; border-radius: 6px; width: 100%; box-sizing: border-box; }
         button { background: #238636; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
@@ -31,6 +31,7 @@
         <div><label>Период 2</label><input type="date" id="s2" value="2021-01-01"></div>
         <div><label>Период 3</label><input type="date" id="s3" value="2000-01-01"></div>
         <div><label>График с</label><input type="date" id="ps" value="2026-01-01"></div>
+        <div><label>График по</label><input type="date" id="pe" value=""></div>
     </div>
 
     <label>Использовать модели:</label>
@@ -70,8 +71,11 @@ async function run() {
     const url = "https://mosaic-headache-giddily.ngrok-free.dev";
     const params = new URLSearchParams({
         ticker: document.getElementById('ticker').value,
-        s1: document.getElementById('s1').value, s2: document.getElementById('s2').value, s3: document.getElementById('s3').value,
+        s1: document.getElementById('s1').value, 
+        s2: document.getElementById('s2').value, 
+        s3: document.getElementById('s3').value,
         p_start: document.getElementById('ps').value,
+        p_end: document.getElementById('pe').value, // Передаем конечную дату
         active_models: models
     });
 
@@ -102,8 +106,10 @@ async function run() {
                 container.innerHTML += html;
             }
             document.getElementById('results').style.display = 'block';
+        } else {
+            alert("Ошибка API: " + d.message);
         }
-    } catch (e) { alert("Ошибка! Проверь Colab."); }
+    } catch (e) { alert("Ошибка! Проверь Colab. " + e.message); }
     finally { btn.innerText = "ЗАПУСТИТЬ АНАЛИЗ"; btn.disabled = false; }
 }
 </script>
