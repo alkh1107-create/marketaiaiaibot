@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Neuroevolution Lab</title>
+
+<style>
+  body{font-family:Arial;background:#0d1117;color:#c9d1d9;padding:20px;}
+  .card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;margin-bottom:20px;}
+  input{background:#0d1117;border:1px solid #30363d;color:white;padding:8px;border-radius:6px;width:120px;}
+  button{background:#238636;border:none;color:white;padding:10px 20px;border-radius:6px;cursor:pointer;font-weight:bold;}
+  button:hover{background:#2ea043;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:12px 0;}
+  .stat{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px;font-size:13px;}
+  .up{color:#3fb950;} .dn{color:#f85149;} .gold{color:#e3b341;}
+  img{width:100%;border-radius:8px;border:1px solid #30363d;margin-top:12px;}
+  #log{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:12px;
+       font-family:monospace;font-size:12px;height:200px;overflow-y:auto;margin-top:12px;}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h2>Neuroevolution Tournament</h2>
+
+  <div class="grid">
+    <div><input id="tk" value="EURUSD=X"></div>
+    <div><input id="ts" value="2010-01-01"></div>
+    <div><input id="te" value="2023-12-31"></div>
+    <div><input id="g" value="100" type="number"></div>
+    <div><input id="p" value="200" type="number"></div>
+    <div><input id="lv" value="5" type="number"></div>
+  </div>
+
+  <button onclick="startEvo()">START EVOLUTION</button>
+  <button onclick="getSignal()">LIVE SIGNAL</button>
+  <button onclick="backtest()">BACKTEST</button>
+
+  <div id="log">Ready...</div>
+</div>
+
+<div class="card" id="results" style="display:none">
+  <h3 id="res_title"></h3>
+  <div class="grid" id="stats_grid"></div>
+  <img id="res_plot">
+</div>
+
+<script>
+
+const BASE = "https://mosaic-headache-giddily.ngrok-free.dev";
+
+const log = t => {
+  document.getElementById("log").innerHTML += "<br>" + t;
+};
+
+async function startEvo() {
+
+  const params = new URLSearchParams({
+    ticker: tk.value,
+    train_start: ts.value,
+    train_end: te.value,
+    generations: g.value,
+    population: p.value,
+    leverage: lv.value,
+  });
+
+  log("Starting evolution...");
+
+  const r = await fetch(BASE + "/evolve?" + params).then(r => r.json());
+
+  if (r.status === "done") {
+    log("DONE");
+    show(r);
+  } else {
+    log("ERROR " + JSON.stringify(r));
+  }
+}
+
+async function getSignal() {
+  const r = await fetch(BASE + "/predict").then(r => r.json());
+  log("SIGNAL: " + r.action + " | " + r.price);
+}
+
+async function backtest() {
+  const r = await fetch(BASE + "/backtest_champion?test_start=2024-01-01")
+    .then(r => r.json());
+
+  show({
+    last_gen: {
+      best_return: r.total_return,
+      best_sharpe: r.sharpe,
+      best_dd: r.max_drawdown
+    },
+    plot: r.plot,
+    best_fitness: r.sharpe
+  });
+}
+
+function show(r) {
+  document.getElementById("results").style.display = "block";
+
+  const s = r.last_gen;
+
+  document.getElementById("stats_grid").innerHTML = `
+    <div class="stat">Return: ${s.best_return}</div>
+    <div class="stat">Sharpe: ${s.best_sharpe}</div>
+    <div class="stat">Drawdown: ${s.best_dd}</div>
+  `;
+
+  if (r.plot) {
+    document.getElementById("res_plot").src =
+      "data:image/png;base64," + r.plot;
+  }
+}
+
+</script>
+
+</body>
+</html>
